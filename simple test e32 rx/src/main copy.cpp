@@ -35,7 +35,6 @@ unsigned char data[5];
 unsigned char ToSend[SEND_DATA_SIZE];
 int lastPinSignal;
 
-unsigned char* ReceiveData();
 void SetData(unsigned char* rec);
 void SendData();
 void Debug();
@@ -72,35 +71,51 @@ void setup()
 
 void loop() 
 {
-  unsigned char* rec = NULL;
 
   if(digitalRead(4) != 1)
   {
+    unsigned char rec[5];
     if(E32Serial.available())
     {
-      unsigned long currentTime = millis();
-      unsigned long interval = currentTime - lastReceiveTime;
-      lastReceiveTime = currentTime;
-      Serial.println(interval);
-      rec = ReceiveData();
+        unsigned long currentTime = millis();
+        unsigned long interval = currentTime - lastReceiveTime;
+        lastReceiveTime = currentTime;
+        Serial.println(interval);
+        unsigned char marker;
+        while (E32Serial.available())
+        {
+            marker = E32Serial.read();
+            if(marker == START_FLAG)
+            {
+                break;
+            }
+        }
+        int i = 0;
+        while (E32Serial.available() && i < SEND_DATA_SIZE)
+        {
+            rec[i] = E32Serial.read();
+            i++;
+        }
+        if(i != SEND_DATA_SIZE || !E32Serial.available() || (E32Serial.available() && E32Serial.read() != END_FLAG))
+        {
+
+        }
+        else
+        {
+            disconectTime = millis();
+            waitSignal = false;
+            Serial.print("[");
+            for (int i=0;i<5;i++)
+            {
+                if(i != 0)
+                    Serial.print("  ");
+                Serial.print(rec[i]);
+            }
+            Serial.println("]");
+            SetData(rec);
+        }
     }
 
-  }
-
-  if(rec != NULL)
-  {
-      disconectTime = millis();
-      waitSignal = false;
-      Serial.print("[");
-      for (int i=0;i<5;i++)
-      {
-          if(i != 0)
-              Serial.print("  ");
-          Serial.print(rec[i]);
-      }
-      Serial.println("]");
-      SetData(rec);
-      free(rec);
   }
   else
   {
@@ -124,55 +139,6 @@ void loop()
       SendData();
       // Debug();
   }
-}
-
-unsigned char* ReceiveData()
-{
-    unsigned char *res;
-    unsigned char marker;
-    int i = 0;
-
-  //  Serial.print("Find START_FLAG\n");
-    while (E32Serial.available())
-    {
-        marker = E32Serial.read();
-        if(marker == START_FLAG)
-        {
-          //  Serial.print("START_FLAG FINDED\n");
-            break;
-        }
-    }
-
-    res = (unsigned char*)malloc(SEND_DATA_SIZE * sizeof(unsigned char));
-    for(int i = 0; i < SEND_DATA_SIZE; i++)
-    {
-        res[i] = 0;
-    }
-
-    while (E32Serial.available() && i < SEND_DATA_SIZE)
-    {
-        res[i] = E32Serial.read();
-        if((int)res[i] == START_FLAG || (int)res[i] == END_FLAG)
-        {
-            // Serial.print("Broken Data\n");
-            break;
-        }
-        i++;
-    }
-    if(i != SEND_DATA_SIZE || !E32Serial.available() || (E32Serial.available() && E32Serial.read() != END_FLAG))
-    {
-      // Serial.print(i);
-      // Serial.print("   zero\n");
-      losePackages += 1;
-      free(res);
-      return NULL;
-    }
-   Serial.print("Lose package ");
-   Serial.print(losePackages);
-   Serial.print("\n");
-   losePackages = 0;
-
-    return res;
 }
    
 void SetData(unsigned char* rec)
