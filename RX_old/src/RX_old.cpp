@@ -11,7 +11,7 @@
 uint32_t uartspeed=UARTSPEED;
 uint32_t airspeed=AIRSPEED;
 uint32_t channel=CHANNEL;
-uint8_t addr=ADDR;
+uint8_t  addr=ADDR;
 
 #define SEND_DATA_SIZE  5
 #define DISCONNECTDELAY  2000
@@ -47,9 +47,6 @@ void setup()
   pinMode(4,INPUT);
   pinMode(5, OUTPUT); 
   pinMode(6, OUTPUT);
-  digitalWrite(5, HIGH); // Логическая единица
-  digitalWrite(6, HIGH); // Логическая единица
-  // lastPinSignal = 0;
   init(uartspeed,airspeed,channel,addr);
 
   losePackages= 0;
@@ -88,7 +85,7 @@ void loop()
       disconectTime = millis();
       waitSignal = false;
       Serial.print("[");
-      for (int i=0;i<5;i++)
+      for (int i=0;i<=4;i++)
       {
           if(i != 0)
               Serial.print("  ");
@@ -117,12 +114,12 @@ void loop()
 
       SendData();
       // Debug();
-    //    for (int i = 0; i <=4; i++)
-    //     {
-    //         Serial.print(ToSend[i]);
-    //         Serial.print(" ");
-    //     }
-   // Serial.println();
+       for (int i = 0; i <=4; i++)
+        {
+            Serial.print(ToSend[i]);
+            Serial.print(" ");
+        }
+    Serial.println();
 }
 
 unsigned char* ReceiveData()
