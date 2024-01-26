@@ -128,7 +128,7 @@ void loop()
 
 unsigned char* ReceiveData()
 {
-    unsigned char* res;
+    unsigned char res[SEND_DATA_SIZE];
     unsigned char marker;
     int i = 0;
 
@@ -143,7 +143,6 @@ unsigned char* ReceiveData()
         }
     }
 
-    res = (unsigned char*)malloc(SEND_DATA_SIZE * sizeof(unsigned char));
 
     while (E32Serial.available() && i < SEND_DATA_SIZE)
     {
@@ -160,7 +159,6 @@ unsigned char* ReceiveData()
       // Serial.print(i);
       // Serial.print("   zero\n");
       losePackages += 1;
-      free(res);
       return NULL;
     }
    Serial.print("Lose package ");
