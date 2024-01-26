@@ -82,8 +82,6 @@ void DataChanged(uint8_t *newData)
         // Serial.print(analogy);Serial.print(analog);Serial.print(error);
         // Serial.println();
         // }
-       
-        
 }
 
 void sendData() 
