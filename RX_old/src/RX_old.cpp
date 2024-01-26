@@ -23,12 +23,7 @@ bool waitSignal;
 
 
 unsigned long lastReceiveTime = 0;
-String input;
 
-unsigned long startTime = 0;
-int waitTime = 7; 
-
-uint8_t RECARRAY[7];
 
 SoftwareSerial E32Serial(3,2); //RX TX 
 unsigned char data[5];
@@ -43,7 +38,7 @@ void init(uint32_t uartspeed, uint32_t airspeed, uint32_t channel,uint8_t addr);
 
 void setup()
 {
-  Wire.begin(10);
+  Wire.begin(9);
   Wire.onRequest(SendData);
   Serial.begin(115200);
   E32Serial.begin(9600);
@@ -120,17 +115,14 @@ void loop()
       }
   }
 
-  if(data != NULL)
-  {
       SendData();
       // Debug();
-       for (int i = 0; i <=4; i++)
-        {
-            Serial.print((int)ToSend[i]);
-            Serial.print(" ");
-        }
-    Serial.println();
-  }
+    //    for (int i = 0; i <=4; i++)
+    //     {
+    //         Serial.print(ToSend[i]);
+    //         Serial.print(" ");
+    //     }
+   // Serial.println();
 }
 
 unsigned char* ReceiveData()
@@ -180,7 +172,7 @@ unsigned char* ReceiveData()
    
 void SetData(unsigned char* rec)
 {
-    for(int i = 0; i < 5; i++)
+    for(int i = 0; i <=4; i++)
     {
         data[i] = rec[i];
     }

@@ -18,10 +18,10 @@
 #define statusled 6 //Yellow Led on corpus of master 
 
 
-unsigned long previousMillis = 0;  // blinkLED
-int ledState = LOW; //blinkLED
+unsigned long previousMillisbls = 0;  // blinkLED
+int ledStatebls = LOW; //blinkLED
 
-void blinkLED(unsigned long interval);
+void blinkled(uint8_t ledname ,unsigned long interval);//1=always on , 0=shut down
 void SetActiveMotors();
 void RecieveData();
 void CheckDelay();
@@ -81,27 +81,27 @@ void setup() {
   digitalWrite(Contr2, 0);
   digitalWrite(relay1, 0);
   digitalWrite(relay2, 0);
+  blinkled(statusled,100);
   speed = 0;
   steer = 0;
   currSpeedS = 0;
   currSpeedF = 0;
   currSteer = 0;
-  data[0] = 0;
-  data[1] = 0;
-  data[2] = 128;
-  data[3] = 128;
-  data[4] = 0;
-  delay(500);
+  data[0] = 127;
+  data[1] = 128;
+  data[2] = 0;
+  data[3] = 0;
+  data[4] = 5;
+  delay(200);
   SetActiveMotors();
-  blinkLED(1);
+
 }
 
 void loop() {
-  // if(digitalRead(RXSTATE) == LOW && enabled != 0)
-  // {
-  //   SetActiveMotors();
-  //   enabled = 0;
-  // }
+if (data[4]==0)
+{blinkled(statusled,1);}
+else 
+{blinkled(statusled,100);}
   RecieveData();
   CheckDelay();
   DataConstruct();
@@ -118,9 +118,9 @@ void loop() {
 }
 
 void RecieveData() {
-  Wire.requestFrom(10, 5);                 // Запрос на получение данных от Slave Arduino(9 number of slave , 8 number of bytes)
-  if (Wire.available() >= sizeof(data)) {  // Проверка наличия достаточного количества данных
-    for (int i = 0; i < sizeof(data); i++) {
+  Wire.requestFrom(9, 5);                 // Запрос на получение данных от Slave Arduino(9 number of slave , 8 number of bytes)
+  if (Wire.available() >= 5) {  // Проверка наличия достаточного количества данных
+    for (int i = 0; i <=5; i++) {
       data[i] = Wire.read();  // Чтение принятых данных и сохранение их в массив
     }
   }
@@ -132,9 +132,9 @@ void SetActiveMotors() {
 }
 
 void RelayCheck() {       ///число == номер реле которое должно спаотать и скинуть одну или вторую мину 
-  if (data[1] == 1) 
+  if (data[2] == 1) 
   {digitalWrite(relay1, 1);}
-  else if (data[1] == 2) 
+  else if (data[2] == 2) 
   {digitalWrite(relay2, 1);}
    else 
    {
@@ -266,28 +266,11 @@ void Send(int fSp, int sSp, int fSt, int sSt) {
   Controller2.write((uint8_t *)&Command, sizeof(Command));
 }
 
-void blinkLED(unsigned long interval)
- {
-  if (interval==1)
-  {digitalWrite(statusled,1);}
-  else 
-  {
-  unsigned long currentMillis = millis();  // Получаем текущее время
-  if (currentMillis - previousMillis  >= interval) {
-    previousMillis = currentMillis;
-    if (ledState == LOW) {
-      ledState = HIGH;
-    } else {
-      ledState = LOW;
-    }
-    digitalWrite(statusled, ledState);
-  }
-}
-}
+
 
 void Debug() {
   Serial.print("data is: ");
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i <=4; i++) {
     Serial.print(data[i]);
     Serial.print(" ");
   }
@@ -304,4 +287,26 @@ void CheckDelay() {
     SetActiveMotors();
     activateDelay = millis();
   }
+}
+  
+
+  void blinkled(uint8_t ledname ,unsigned long interval)
+ {
+  if (interval==1)
+  {digitalWrite(ledname,1);}
+  else if  (interval==0)
+  {digitalWrite(ledname,0);}
+  else  
+  {
+  unsigned long currentMillis = millis();  // Получаем текущее время
+  if (currentMillis - previousMillisbls >= interval) {
+    previousMillisbls = currentMillis;
+    if (ledStatebls == LOW) {
+      ledStatebls = HIGH;
+    } else {
+      ledStatebls = LOW;
+    }
+    digitalWrite(ledname, ledStatebls);
+  }
+}
 }
