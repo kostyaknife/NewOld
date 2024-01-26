@@ -91,10 +91,9 @@ void loop()
             }
         }
         int i = 0;
-        while (E32Serial.available() && i < SEND_DATA_SIZE)
+        for(int i = 0; i < SEND_DATA_SIZE; i++)
         {
             rec[i] = E32Serial.read();
-            i++;
         }
         if(i != SEND_DATA_SIZE || !E32Serial.available() || (E32Serial.available() && E32Serial.read() != END_FLAG))
         {
