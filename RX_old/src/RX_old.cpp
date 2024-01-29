@@ -4,6 +4,9 @@
 #include <stdlib.h>
 #include "Arduino.h"
 
+
+#define RXTIMEOUT 4000 //if no new data is received during the “RXTIMEOUT” period, the data for the "mastercontrolled" will be changed to the default data
+#define NOTPARSED 20// if received data will not be successfully parsed for "NOTPARSED" the data for the "mastercontrolled" will be changed to the default data
 #define ADDR 11 // 
 #define UARTSPEED 115200 //9600 19200 38400 57600 115200 //
 #define AIRSPEED 19200 // 300 1200 2400 4800 9600 19200 //
@@ -11,210 +14,123 @@
 uint32_t uartspeed=UARTSPEED;
 uint32_t airspeed=AIRSPEED;
 uint32_t channel=CHANNEL;
-uint8_t  addr=ADDR;
+uint8_t addr=ADDR;
 
-#define SEND_DATA_SIZE  5
-#define DISCONNECTDELAY  2000
-#define START_FLAG 253
-#define END_FLAG 254
-int losePackages;
-unsigned long disconectTime;
-bool waitSignal;
+uint32_t lasttime=0;
+uint32_t curtime;
+
+uint32_t starttime=0;
+uint32_t currenttime;
+uint32_t interval;
+
+uint8_t RECARRAY[5];
+uint8_t DEFARRAY[5]={127,128,111,111,5};
 
 
-unsigned long lastReceiveTime = 0;
-
+bool ac=0;
+bool gooddata=0;
+uint8_t notparsed=0;
 
 SoftwareSerial E32Serial(3,2); //RX TX 
-unsigned char data[5];
-unsigned char ToSend[SEND_DATA_SIZE];
-int lastPinSignal;
 
-unsigned char* ReceiveData();
-void SetData(unsigned char* rec);
+
 void SendData();
-void Debug();
+void pars ();
 void init(uint32_t uartspeed, uint32_t airspeed, uint32_t channel,uint8_t addr); //9600 19200 38400 57600 115200 // 300 1200 2400 4800 9600 19200 // 862...931 //
+
 
 void setup()
 {
-  Wire.begin(9);
-  Wire.onRequest(SendData);
+ 
   Serial.begin(115200);
   E32Serial.begin(9600);
-  E32Serial.setTimeout(2);
+  E32Serial.setTimeout(1);
 
   pinMode(4,INPUT);
   pinMode(5, OUTPUT); 
   pinMode(6, OUTPUT);
   init(uartspeed,airspeed,channel,addr);
-
-  losePackages= 0;
-  disconectTime = millis();
-  waitSignal = true;
-
-  data[0] = 127;
-  data[1] = 128;
-  data[2] = 0;
-  data[3] = 0;
-  data[4] = 0;
-  ToSend[4]=5;// 0 if some data was received , 5 or data not received yet or radio was disconnected 
+  Wire.begin(10);
+  Wire.onRequest(SendData);
 }
 
 
 
 void loop() 
-{
-  unsigned char* rec = NULL;
-
-  if(digitalRead(4) != 1)
+{   
+  if (digitalRead(4)==1 && !ac)
   {
-    if(E32Serial.available())
-    {
-      unsigned long currentTime = millis();
-      unsigned long interval = currentTime - lastReceiveTime;
-      lastReceiveTime = currentTime;
-      Serial.println(interval);
-      rec = ReceiveData();
-      
-    }
+    ac=1;
   }
-  if(rec != NULL)
-  {   
-      ToSend[4]=0;
-      disconectTime = millis();
-      waitSignal = false;
-      Serial.print("[");
-      for (int i=0;i<=4;i++)
-      {
-          if(i != 0)
-              Serial.print("  ");
-          Serial.print(rec[i]);
-      }
-      Serial.println("]");
-      SetData(rec);
-      free(rec);
-  }
-  else
+    if (digitalRead(4)==0 && ac) 
   {
-      if(!waitSignal && millis() - disconectTime > DISCONNECTDELAY)
-      {
-          waitSignal = true;
-            data[0] = 127;
-            data[1] = 128;
-            data[2] = 0;
-            data[3] = 0;
-            ToSend[4] = 5;// 0 if some data was received , 5 or data not received yet or radio was disconnected 
-          Wire.write((unsigned char*)ToSend, sizeof(ToSend));
-          Serial.print("DISCONNECTED ");
-          Serial.println(millis() - disconectTime);
-          disconectTime = millis();
-      }
+    pars();
+    starttime=millis();
+  }
+   if ( digitalRead(4)==1 && ac)
+  {
+    interval=millis()-starttime;
+  }
+  if (interval>=RXTIMEOUT || notparsed>=NOTPARSED)
+  {
+    gooddata=0;
+  }
+  if (Serial.available())
+  {
+    curtime=millis();
+    if (curtime-lasttime>=100)
+    {
+    lasttime=curtime;
+    Serial.print("notparsed  ");Serial.print(notparsed); Serial.println();
+    Serial.print("interval  ");Serial.print(interval); Serial.println();
+    Serial.print("RECARRAY : ");
+    for(int i = 0; i < 8; i++)
+        {   
+         Serial.print(RECARRAY[i]);
+         Serial.print("  ");
+        }
+        Serial.println("  ");
+    }
   }
 
-      SendData();
-      // Debug();
-       for (int i = 0; i <=4; i++)
-        {
-            Serial.print(ToSend[i]);
-            Serial.print(" ");
-        }
-    Serial.println();
 }
-
-unsigned char* ReceiveData()
-{
-    unsigned char* res;
-    unsigned char marker;
-    int i = 0;
-
-  //  Serial.print("Find START_FLAG\n");
-    while (E32Serial.available())
-    {
-        marker = E32Serial.read();
-        if(marker == START_FLAG)
-        {
-          //  Serial.print("START_FLAG FINDED\n");
-            break;
-        }
-    }
-
-    res = (unsigned char*)malloc(SEND_DATA_SIZE * sizeof(unsigned char));
-
-    while (E32Serial.available() && i < SEND_DATA_SIZE)
-    {
-        res[i] = E32Serial.read();
-        if((int)res[i] == START_FLAG || (int)res[i] == END_FLAG)
-        {
-            // Serial.print("Broken Data\n");
-            break;
-        }
-        i++;
-    }
-    if(i != SEND_DATA_SIZE || !E32Serial.available() || (E32Serial.available() && E32Serial.read() != END_FLAG))
-    {
-      // Serial.print(i);
-      // Serial.print("   zero\n");
-      losePackages += 1;
-      free(res);
-      return NULL;
-    }
-   Serial.print("Lose package ");
-   Serial.print(losePackages);
-   Serial.print("\n");
-   losePackages = 0;
-
-    return res;
-}
-   
-void SetData(unsigned char* rec)
-{
-    for(int i = 0; i <=4; i++)
-    {
-        data[i] = rec[i];
-    }
-}
-
-void SendData()
-{
-    ToSend[0]=data[0];//speed
-    ToSend[1]=data[1];//steer
-    ToSend[2]=data[2];//mina
-    ToSend[3]=data[3];//additional data for speed 
-    //ToSend[4]=5;
-    Wire.write((unsigned char*)ToSend, sizeof(ToSend));
-}
-   
-void Debug()
-{
-    Serial.print("data is: ");
-    if(data == NULL)
-    {
-        Serial.print("NULL ");
-        Serial.print("[");
-        for (int i = 0; i < 4; i++)
-        {
-            Serial.print((int)ToSend[i]);
-            Serial.print(" ");
-        }
-    Serial.print("]");
-        Serial.println();
-        return;
-    }
-    for (int i = 0; i < SEND_DATA_SIZE; i++) {
-        Serial.print((int)data[i]);
-        Serial.print(" ");
-    }
-    Serial.print("[");
-    for (int i = 0; i < 4; i++) {
-        Serial.print((int)ToSend[i]);
-        Serial.print(" ");
-    }
-    Serial.print("]");
-    Serial.println();
-}
-   
     
+void pars()
+{
+    uint8_t RECRAW[8];
+        while (E32Serial.available())
+        { 
+            for (int i = 0; i < 8; i++) 
+            {
+                RECRAW[i] = E32Serial.read();
+            }
+         if (RECRAW[0] == 253 && RECRAW[7] == 254 && RECRAW[6] ==(((RECRAW[1]+RECRAW[2]+RECRAW[3]+RECRAW[4])/8)+RECRAW[4]))
+          { 
+            gooddata=1;
+            notparsed=0;
+            RECARRAY[0]=RECRAW[1];
+            RECARRAY[1]=RECRAW[2];
+            RECARRAY[2]=RECRAW[3];
+            RECARRAY[3]=RECRAW[4];
+            RECARRAY[4]=0;
+            memset(RECRAW, 0, sizeof(RECRAW));
+          }
+          else  
+          {
+           notparsed++;
+           memset(RECRAW, 0, sizeof(RECRAW));
+          }
+          ac=0;
+        }
+}
+  void SendData()
+{
+    if (!gooddata)
+    { Wire.write(DEFARRAY, sizeof(DEFARRAY));}
+    else if (gooddata)
+    { Wire.write(RECARRAY, sizeof(RECARRAY));}
+}
+
 
 
 
@@ -304,5 +220,4 @@ void init(uint32_t uartspeed,uint32_t airspeed,uint32_t channel,uint8_t addr)
   Serial.print("Air Data Rate: ");  Serial.print(airspeed); Serial.println();
   Serial.print("Channel (Freqency): "); Serial.print(ch); Serial.print(" ("); Serial.print(channel); Serial.print(")"); Serial.println();
   Serial.println("For Debug send any symbol...");
-
 }

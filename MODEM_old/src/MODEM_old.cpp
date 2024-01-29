@@ -11,7 +11,7 @@
 
 #define ledstatus 11 
 #define leddata 12
-#define SEND_DATA_SIZE  5
+#define SEND_DATA_SIZE  6
 #define START_FLAG 253
 #define END_FLAG 254
 #define DEADRANGE 10
@@ -23,18 +23,21 @@ uint8_t addr=ADDR;
 
 
 SoftwareSerial E32Serial(3,2); //RX TX 
-unsigned char RawData[19];
-unsigned char PrevRawData[19];
-unsigned char finalData[SEND_DATA_SIZE];
+uint8_t RawData[19];
+uint8_t PrevRawData[19];
+uint8_t finalData[SEND_DATA_SIZE];
 unsigned long time;
 int enabled;
 bool checkClick;
 bool clicked;
 unsigned long clickDelay;
 
-uint8_t mina=0;
-uint8_t spdset;
-uint8_t code=0;
+uint8_t mina=111;
+uint8_t spdset=111;
+uint8_t code=100;
+uint8_t crc;
+
+
 
 unsigned long previousMillisbls = 0;  // blinkLED
 int ledStatebls = LOW; //blinkLED
@@ -69,11 +72,12 @@ void setup()
   time = millis();
   // finalData = (unsigned char*)malloc(SEND_DATA_SIZE  * sizeof(unsigned char));
   checkClick = false;
-  finalData[0] = 127;
-  finalData[1] = 128;
-  finalData[2] = mina;
-  finalData[3] = spdset;
-  finalData[4] = code;
+  // finalData[0] = 127;
+  // finalData[1] = 128;
+  // finalData[2] = mina;
+  // finalData[3] = spdset;
+  // finalData[4] = code;
+  // finalData[5] = crc;
   //////
 }
 
@@ -86,6 +90,8 @@ void loop()
      if(digitalRead(4)==1)
     {
       code++;
+      if (code>=253)
+      {code=111;}
        SendData(finalData);
       if (Serial.available())
       {
@@ -181,35 +187,35 @@ void ReceiveRawData()
 
 void GetFinalData()
 {
-  if (RawData[17]!=0||RawData[15]!=0)
-  {
+  
+  
   if(RawData[17]!=0)
-  {mina=1;}
-  if (RawData[15]!=0)
-  {mina=2;}
-  }
+  {mina=112;}
+  else if (RawData[15]!=0)
+  {mina=113;}
   else 
-  {mina=0;}
+  {mina=111;}
   if (RawData[18]!=0||RawData[16]!=0)
   {
   if (RawData[18]!=0)
-  {spdset=1;}
+  {spdset=112;}
    if (RawData[16]!=0)
-  {spdset=2;}
+  {spdset=113;}
    if (RawData[16]!=0 && RawData[18]!=0)
-  {spdset=3;}
+  {spdset=114;}
   }
   else 
-  {spdset=0;}
-
+  {spdset=111;}
+     
+    
+    finalData[0] = RawData[4];//speed
+    finalData[1] = RawData[5];//steer
     finalData[2] = mina;//mina
     finalData[3] = spdset;//speed settings
     finalData[4] = code;
-    finalData[0] = RawData[4];//speed
-    finalData[1] = RawData[5];//steer
-   
-      AddAditionalData();
- 
+    AddAditionalData();
+    crc = ((finalData[0]+finalData[1]+finalData[2]+finalData[3])/8)+finalData[3];
+    finalData[5] = crc;
 
 }
 
@@ -277,15 +283,15 @@ void SendData(unsigned char data[SEND_DATA_SIZE])
     {
         toSend[i+ 1] = data[i];
     }
-  //   if (Serial.available())
-  //   {
-  //  for(int i = 0; i < sizeof(toSend); i++)
-  //       {   
-  //        Serial.print(toSend[i]);
-  //        Serial.print("  ");
-  //       }
-  //       Serial.println("  ");
-  //   }
+    if (Serial.available())
+    {
+   for(int i = 0; i < sizeof(toSend); i++)
+        {   
+         Serial.print(toSend[i]);
+         Serial.print("  ");
+        }
+        Serial.println("  ");
+    }
     E32Serial.write(toSend, sizeof(toSend));
 }
 

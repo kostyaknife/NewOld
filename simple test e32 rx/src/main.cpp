@@ -4,9 +4,10 @@
 #include <stdlib.h>
 #include "Arduino.h"
 
-#define ADDR 255 // 
+#define RECARRAY_SIZE 10
+#define ADDR 11 // 
 #define UARTSPEED 115200 //9600 19200 38400 57600 115200 //
-#define AIRSPEED 4800 // 300 1200 2400 4800 9600 19200 //
+#define AIRSPEED 19200 // 300 1200 2400 4800 9600 19200 //
 #define CHANNEL 920 // 862...931 // 
 uint32_t uartspeed=UARTSPEED;
 uint32_t airspeed=AIRSPEED;
@@ -20,7 +21,7 @@ String input;
 unsigned long startTime = 0;
 int waitTime = 7; 
 
-uint8_t RECARRAY[10];
+uint8_t RECARRAY[RECARRAY_SIZE];
 
 SoftwareSerial E32Serial(3,2); //RX TX 
 
@@ -35,9 +36,6 @@ void setup()
   pinMode(4,INPUT);
   pinMode(5, OUTPUT); 
   pinMode(6, OUTPUT);
-  digitalWrite(5, HIGH); // Логическая единица
-  digitalWrite(6, HIGH); // Логическая единица
-
   init(uartspeed,airspeed,channel,addr);
 }
 
@@ -52,7 +50,7 @@ if (digitalRead(4)==0)
     // lastReceiveTime = currentTime;
     while (E32Serial.available())
     {
-    for (int i=0;i<=6;i++)
+    for (int i=0;i<RECARRAY_SIZE;i++)
     {
       RECARRAY[i]=E32Serial.read();
       Serial.print(RECARRAY[i]);

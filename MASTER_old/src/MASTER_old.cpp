@@ -118,9 +118,9 @@ else
 }
 
 void RecieveData() {
-  Wire.requestFrom(9, 5);                 // Запрос на получение данных от Slave Arduino(9 number of slave , 8 number of bytes)
+  Wire.requestFrom(10, 5);                 // Запрос на получение данных от Slave Arduino(9 number of slave , 8 number of bytes)
   if (Wire.available() >= 5) {  // Проверка наличия достаточного количества данных
-    for (int i = 0; i <=5; i++) {
+    for (int i = 0; i <=4; i++) {
       data[i] = Wire.read();  // Чтение принятых данных и сохранение их в массив
     }
   }
