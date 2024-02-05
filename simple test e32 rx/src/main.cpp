@@ -3,7 +3,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "Arduino.h"
-
+#define M0 2
+#define M1 3
+#define AUX 6
 #define RECARRAY_SIZE 10
 #define ADDR 11 // 
 #define UARTSPEED 115200 //9600 19200 38400 57600 115200 //
@@ -23,7 +25,7 @@ int waitTime = 7;
 
 uint8_t RECARRAY[RECARRAY_SIZE];
 
-SoftwareSerial E32Serial(3,2); //RX TX 
+SoftwareSerial E32Serial(4,5); //RX TX 
 
 void init(uint32_t uartspeed, uint32_t airspeed, uint32_t channel,uint8_t addr); //9600 19200 38400 57600 115200 // 300 1200 2400 4800 9600 19200 // 862...931 //
 void setup()
@@ -33,9 +35,9 @@ void setup()
     E32Serial.begin(9600);
     E32Serial.setTimeout(2);
 
-  pinMode(4,INPUT);
-  pinMode(5, OUTPUT); 
-  pinMode(6, OUTPUT);
+  pinMode(AUX,INPUT);
+  pinMode(M0, OUTPUT); 
+  pinMode(M1, OUTPUT);
   init(uartspeed,airspeed,channel,addr);
 }
 
@@ -43,13 +45,16 @@ void setup()
 
 void loop() 
 {
-if (digitalRead(4)==0)
+if (digitalRead(AUX)==0)
    {
-    // unsigned long currentTime = millis();
-    // unsigned long interval = currentTime - lastReceiveTime;
-    // lastReceiveTime = currentTime;
-    while (E32Serial.available())
+    if (E32Serial.available())
     {
+    unsigned long currentTime = millis();
+    unsigned long interval = currentTime - lastReceiveTime;
+    lastReceiveTime = currentTime;
+   
+  
+    while (E32Serial.available())
     for (int i=0;i<RECARRAY_SIZE;i++)
     {
       RECARRAY[i]=E32Serial.read();
@@ -57,7 +62,9 @@ if (digitalRead(4)==0)
       Serial.print(" ");
     }
     Serial.println();
+     Serial.println(interval);
     }
+    
     
    }
 }
@@ -124,6 +131,8 @@ void init(uint32_t uartspeed,uint32_t airspeed,uint32_t channel,uint8_t addr)
   unsigned int sp=(fb<<3)|sb;
 
 
+  digitalWrite(M0, 1); // Логическая единица
+  digitalWrite(M1, 1);
   delay(500);
   E32Serial.write(0xC0); // C0 - сохранить настройки, C2 - сбросить после отключения от питания
   E32Serial.write(0xFF);  // Верхний байт адреса. Если оба байта 0xFF - передача и прием по всем адресам на канале
@@ -132,8 +141,8 @@ void init(uint32_t uartspeed,uint32_t airspeed,uint32_t channel,uint8_t addr)
   E32Serial.write(ch); // Канал (частота), 0x06 - 868 МГц, шаг частоты - 1 МГц (0x07 - 869 МГц)
   E32Serial.write(0x44); // Служебные опции
   delay(500);
-  digitalWrite(5, LOW); // Логическая единица
-  digitalWrite(6, LOW);
+  digitalWrite(M0, 0); // Логическая единица
+  digitalWrite(M1, 0);
   delay(500);
   E32Serial.write(0xC1); // Передаём 3 байта, чтобы модуль вернул текущие параметры
   E32Serial.write(0xC1);

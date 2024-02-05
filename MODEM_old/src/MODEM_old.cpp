@@ -3,11 +3,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "Arduino.h"
-
-#define ADDR 11 // 
+//TX
+#define ADDR 1 // 
 #define UARTSPEED 115200 //9600 19200 38400 57600 115200 //
 #define AIRSPEED 19200 // 300 1200 2400 4800 9600 19200 //
-#define CHANNEL 920 // 862...931 //
+#define CHANNEL 890 // 862...931 //
 
 #define ledstatus 11 
 #define leddata 12
@@ -19,7 +19,7 @@
 uint32_t uartspeed=UARTSPEED;
 uint32_t airspeed=AIRSPEED;
 uint32_t channel=CHANNEL;
-uint8_t addr=ADDR;
+uint8_t  addr=ADDR;
 
 
 SoftwareSerial E32Serial(3,2); //RX TX 
@@ -93,20 +93,20 @@ void loop()
       if (code>=253)
       {code=111;}
        SendData(finalData);
-      if (Serial.available())
-      {
-      unsigned long currentTime = millis();
-    unsigned long interval = currentTime - lastSend;
-    Serial.println(interval);
-     for(int i = 0; i < 19; i++)
-        {   
-         Serial.print(RawData[i]);
-         Serial.print("  ");
-        }
-        Serial.println("  ");
+    //   if (Serial.available())
+    //   {
+    //   unsigned long currentTime = millis();
+    // unsigned long interval = currentTime - lastSend;
+    // //Serial.println(interval);
+    //  for(int i = 0; i < 19; i++)
+    //     {   
+    //      Serial.print(RawData[i]);
+    //      Serial.print("  ");
+    //     }
+    //     Serial.println("  ");
         
-    lastSend = currentTime;
-      }
+    // lastSend = currentTime;
+    //   }
     }
       if (RawData[0]==111)
       {blinkled(leddata,0);}
@@ -226,37 +226,37 @@ void AddAditionalData()
     finalData[0] = 48;
     finalData[1] = 128;
   }
-  else if(RawData[7]!=0)
+  if(RawData[7]!=0)
   {
     finalData[0] = 30;
     finalData[1] = 255;
   }
-  else if(RawData[10]!=0)
+  if(RawData[10]!=0)
   {
     finalData[0] = 208;
     finalData[1] = 128;
   }
-    else if(RawData[8]!=0)
+  if(RawData[8]!=0)
   {
     finalData[0] = 30;
     finalData[1] = 0;
   }
-  else if(RawData[9] !=0 && RawData[7]!=0)
+  if(RawData[9] !=0 && RawData[7]!=0)
   {
     finalData[0] = 32;
     finalData[1] = 192;
   }
-  else if(RawData[10] !=0 && RawData[7]!=0)
+   if(RawData[10] !=0 && RawData[7]!=0)
   {
     finalData[0] = 224;
     finalData[1] = 192;
   }
-  else if(RawData[8]!=0 && RawData[10] !=0)
+  if(RawData[8]!=0 && RawData[10] !=0)
   {
     finalData[0] = 224;
     finalData[1] = 64;
   }
-  else if(RawData[8]!=0 && RawData[9] !=0)
+   if(RawData[8]!=0 && RawData[9] !=0)
   {
     finalData[0] = 32;
     finalData[1] = 64;
@@ -283,15 +283,14 @@ void SendData(unsigned char data[SEND_DATA_SIZE])
     {
         toSend[i+ 1] = data[i];
     }
-    if (Serial.available())
-    {
-   for(int i = 0; i < sizeof(toSend); i++)
+  
+   for(int i = 0; i <8; i++)
         {   
          Serial.print(toSend[i]);
          Serial.print("  ");
         }
         Serial.println("  ");
-    }
+    
     E32Serial.write(toSend, sizeof(toSend));
 }
 
@@ -385,11 +384,11 @@ void init(uint32_t uartspeed,uint32_t airspeed,uint32_t channel,uint8_t addr)
   while(E32Serial.available()) // Получаем параметры и выводим их в монитор порта
   {
   int inByte = E32Serial.read();
-  Serial.print(inByte, HEX);
+  Serial.print(inByte, DEC);
   Serial.print(" ");
   }
   Serial.println(); // Переносим каретку на новую строку, чтобы данные не сливались друг с другом
-  delay(50);
+  delay(500);
   E32Serial.end();
   delay(50);
   E32Serial.begin(uartspeed);

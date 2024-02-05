@@ -5,16 +5,16 @@
 #include "Arduino.h"
 
 
-#define RXTIMEOUT 4000 //if no new data is received during the “RXTIMEOUT” period, the data for the "mastercontrolled" will be changed to the default data
+#define RXTIMEOUT 2000 //if no new data is received during the “RXTIMEOUT” period, the data for the "mastercontrolled" will be changed to the default data
 #define NOTPARSED 20// if received data will not be successfully parsed for "NOTPARSED" the data for the "mastercontrolled" will be changed to the default data
-#define ADDR 11 // 
+#define ADDR 255 // 
 #define UARTSPEED 115200 //9600 19200 38400 57600 115200 //
 #define AIRSPEED 19200 // 300 1200 2400 4800 9600 19200 //
-#define CHANNEL 920 // 862...931 // 
+#define CHANNEL 890 // 862...931 // 
 uint32_t uartspeed=UARTSPEED;
 uint32_t airspeed=AIRSPEED;
 uint32_t channel=CHANNEL;
-uint8_t addr=ADDR;
+uint8_t  addr=ADDR;
 
 uint32_t lasttime=0;
 uint32_t curtime;
@@ -49,7 +49,9 @@ void setup()
   pinMode(4,INPUT);
   pinMode(5, OUTPUT); 
   pinMode(6, OUTPUT);
+  delay(500);
   init(uartspeed,airspeed,channel,addr);
+  delay(500);
   Wire.begin(10);
   Wire.onRequest(SendData);
 }
@@ -84,7 +86,7 @@ void loop()
     Serial.print("notparsed  ");Serial.print(notparsed); Serial.println();
     Serial.print("interval  ");Serial.print(interval); Serial.println();
     Serial.print("RECARRAY : ");
-    for(int i = 0; i < 8; i++)
+    for(int i = 0; i < 5; i++)
         {   
          Serial.print(RECARRAY[i]);
          Serial.print("  ");
@@ -130,16 +132,6 @@ void pars()
     else if (gooddata)
     { Wire.write(RECARRAY, sizeof(RECARRAY));}
 }
-
-
-
-
-
-
-
-
-
-
 
 void init(uint32_t uartspeed,uint32_t airspeed,uint32_t channel,uint8_t addr)
 {
@@ -187,21 +179,24 @@ void init(uint32_t uartspeed,uint32_t airspeed,uint32_t channel,uint8_t addr)
   
   unsigned int sp=(fb<<3)|sb;
 
-
-  delay(500);
+  
+  digitalWrite(5, HIGH); // Логическая единица
+  digitalWrite(6, HIGH); // Логическая единица
+  delay(200);
   E32Serial.write(0xC0); // C0 - сохранить настройки, C2 - сбросить после отключения от питания
   E32Serial.write(0xFF);  // Верхний байт адреса. Если оба байта 0xFF - передача и прием по всем адресам на канале
   E32Serial.write(addr);  // Нижний байт адреса. Если оба байта 0xFF - передача и прием по всем адресам на канале
   E32Serial.write(sp); // Параметры скорости
   E32Serial.write(ch); // Канал (частота), 0x06 - 868 МГц, шаг частоты - 1 МГц (0x07 - 869 МГц)
   E32Serial.write(0x44); // Служебные опции
-  delay(500);
+  delay(200);
   digitalWrite(5, LOW); // Логическая единица
   digitalWrite(6, LOW);
-  delay(500);
+  delay(200);
   E32Serial.write(0xC1); // Передаём 3 байта, чтобы модуль вернул текущие параметры
   E32Serial.write(0xC1);
   E32Serial.write(0xC1);
+  delay(200);
   while(E32Serial.available()) // Получаем параметры и выводим их в монитор порта
   {
   int inByte = E32Serial.read();
@@ -209,11 +204,11 @@ void init(uint32_t uartspeed,uint32_t airspeed,uint32_t channel,uint8_t addr)
   Serial.print(" ");
   }
   Serial.println(); // Переносим каретку на новую строку, чтобы данные не сливались друг с другом
-  delay(500);
+  delay(200);
   E32Serial.end();
-  delay(500);
+  delay(200);
   E32Serial.begin(uartspeed);
-  delay(500);
+  delay(200);
   Serial.print("E32_900T30D was started "); Serial.println();
   Serial.print("LOW ADDRESS is: ");Serial.print(addr); Serial.println();
   Serial.print("MCU to E32 speed: "); Serial.print(uartspeed); Serial.println();

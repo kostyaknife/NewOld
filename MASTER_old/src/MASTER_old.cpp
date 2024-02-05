@@ -5,7 +5,7 @@
 #include "Arduino.h"
 
 #define START_FRAME 0xABCD  // [-] Start frme definition for reliable serial communication
-#define ACTIVATEDELAY 500
+//#define ACTIVATEDELAY 500
 #define MAXSPEED 1000
 #define SPEEDSTEP 2
 #define STEERSTEP 2
@@ -22,9 +22,8 @@ unsigned long previousMillisbls = 0;  // blinkLED
 int ledStatebls = LOW; //blinkLED
 
 void blinkled(uint8_t ledname ,unsigned long interval);//1=always on , 0=shut down
-void SetActiveMotors();
+void SetMotors(uint8_t IO);
 void RecieveData();
-void CheckDelay();
 void DataConstruct();
 void SmoothSpeed();
 void Send(int fSp, int sSp, int fSt, int sSt);
@@ -32,8 +31,8 @@ void Send();
 void Debug();
 void RelayCheck();
 
-SoftwareSerial Controller1(3, 2);  //RX TX
-SoftwareSerial Controller2(5, 4);  //RX TX 
+SoftwareSerial Controller1(2, 3);  //RX TX
+SoftwareSerial Controller2(4, 5);  //RX TX 
 
 typedef struct {
   uint16_t start;
@@ -89,11 +88,12 @@ void setup() {
   currSteer = 0;
   data[0] = 127;
   data[1] = 128;
-  data[2] = 0;
-  data[3] = 0;
+  data[2] = 111;
+  data[3] = 111;
   data[4] = 5;
-  delay(200);
-  SetActiveMotors();
+  SetMotors(1);
+  delay(500);
+  Serial.print("AUXBUTTON : "); Serial.println(digitalRead(auxbutton)); Serial.println();
 
 }
 
@@ -103,38 +103,49 @@ if (data[4]==0)
 else 
 {blinkled(statusled,100);}
   RecieveData();
-  CheckDelay();
   DataConstruct();
   SmoothSpeed();
-  if(enabled > 0)
-  {
-    if(speed == 0 && steer == 0)
-      Send(-40,-40, 0, 0);
-    else
-      Send(-currSpeedF, currSpeedS, currSteer, currSteer);
-  }
+    if (digitalRead(auxbutton)==0)
+     {
+      Send(currSpeedF, currSpeedS, currSteer, currSteer);
+     }
+     else 
+     {Send(-currSpeedF,-currSpeedS, currSteer, currSteer);}
+
   RelayCheck();
+  if (Serial.available())
+  {
   Debug();
+  }
 }
 
 void RecieveData() {
   Wire.requestFrom(10, 5);                 // Запрос на получение данных от Slave Arduino(9 number of slave , 8 number of bytes)
   if (Wire.available() >= 5) {  // Проверка наличия достаточного количества данных
-    for (int i = 0; i <=4; i++) {
+    for (int i = 0; i <5; i++) {
       data[i] = Wire.read();  // Чтение принятых данных и сохранение их в массив
     }
   }
+ 
 }
 
-void SetActiveMotors() {
+void SetMotors(uint8_t IO) {
+  if (IO==1)
+  {
   digitalWrite(Contr1, 1);
   digitalWrite(Contr2, 1);
+  }
+  else if (IO==0)
+  {
+  digitalWrite(Contr1, 0);
+  digitalWrite(Contr2, 0);
+  }
 }
 
 void RelayCheck() {       ///число == номер реле которое должно спаотать и скинуть одну или вторую мину 
-  if (data[2] == 1) 
+  if (data[2] == 112) 
   {digitalWrite(relay1, 1);}
-  else if (data[2] == 2) 
+  else if (data[2] == 113) 
   {digitalWrite(relay2, 1);}
    else 
    {
@@ -146,28 +157,28 @@ void RelayCheck() {       ///число == номер реле которое д
 void DataConstruct() {
   defSpeed = MAXSPEED / 2;
 
-  if(data[4] == 1 || data[4] == 3)
+  if(data[3] == 112 || data[3] == 114)
   {
     defSpeed = MAXSPEED;
   }
 
-  if (data[2] == 128)
+  if (data[0] == 127)
   {
     speed = 0;
   } 
   else
   {
-    speed = map(data[2], 0, 255, -1 * defSpeed, defSpeed);
+    speed = map(data[0], 0, 255, -1 * defSpeed, defSpeed);
   }
 
-  if (data[3] == 128)
+  if (data[1] == 128)
   {
     steer = 0;
   }
   else
   {
     int defSteer = map(abs(currSpeedS), 0 ,(defSpeed / 100 * 80), defSpeed, defSpeed / 2);
-    steer = map(data[3], 0, 255, -1 * defSteer, defSteer);
+    steer = map(data[1], 0, 255, -1 * defSteer, defSteer);
     if(currSpeedS > 0)
       steer = -1 * steer;
   }
@@ -175,7 +186,7 @@ void DataConstruct() {
 
 void SmoothSpeed()
 {
-  if(data[4] == 2 || data[4] == 3)
+  if(data[3] == 113 || data[4] == 114)
   {
     currSpeedS = speed;
     currSpeedF = speed;
@@ -277,17 +288,6 @@ void Debug() {
   Serial.println();
 }
 
-void CheckDelay() {
-  if (enabled == data[0])
-  {
-    activateDelay = millis();
-  }
-  else if (enabled != data[0] && millis() - activateDelay > ACTIVATEDELAY)
-  {
-    SetActiveMotors();
-    activateDelay = millis();
-  }
-}
   
 
   void blinkled(uint8_t ledname ,unsigned long interval)
